@@ -1,0 +1,60 @@
+<?php
+
+/**
+ * @file
+ * Install, update and uninstall functions for the Domain Config module.
+ */
+
+use Drupal\Core\Utility\UpdateException;
+
+/**
+ * Migrate domain configuration overrides to Drupal config collections.
+ */
+function domain_config_update_10001() {
+  /** @var \Drupal\domain_config\Service\DomainConfigMigration $migration_service */
+  $migration_service = \Drupal::service('domain_config.config_migration');
+
+  $results = $migration_service->migrateConfigurations();
+
+  if ($results['failed'] > 0) {
+    throw new UpdateException(
+      sprintf(
+        'Domain overrides migration failed. Migrated: %d, Failed: %d. Errors: %s',
+        count($results['migrated']),
+        $results['failed'],
+        implode(', ', $results['errors'])
+      )
+    );
+  }
+
+  $message = sprintf(
+    'Successfully migrated %d domain configuration overrides to the Drupal configuration collection format.',
+    count($results['migrated'])
+  );
+
+  if (!empty($results['conflicts'])) {
+    // Always log the full list to dblog so the admin can find it later;
+    // the update-hook return value is shown verbatim in `drush updatedb`
+    // output and on update.php, where a many-hundred-entry list would
+    // wrap into noise. Keep the inline message bounded.
+    \Drupal::logger('domain_config')->warning(
+      'Skipped %count legacy override entries because their destination collection already holds a live value. Full list: %list',
+      [
+        '%count' => count($results['conflicts']),
+        '%list' => implode(', ', $results['conflicts']),
+      ],
+    );
+    $sample = array_slice($results['conflicts'], 0, 10);
+    $extra = count($results['conflicts']) - count($sample);
+    $message .= sprintf(
+      ' Skipped %d entries whose destination collection already holds a live value;'
+      . ' the legacy rows have been left on disk for review: %s%s.'
+      . ' (Full list logged to the watchdog under the "domain_config" channel.)',
+      count($results['conflicts']),
+      implode(', ', $sample),
+      $extra > 0 ? sprintf(' …and %d more', $extra) : '',
+    );
+  }
+
+  return $message;
+}

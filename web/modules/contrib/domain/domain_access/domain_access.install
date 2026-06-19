@@ -1,0 +1,246 @@
+<?php
+
+/**
+ * @file
+ * Install, update and uninstall functions for the Domain Access module.
+ */
+
+use Drupal\domain_access\DomainAccessManagerInterface;
+
+/**
+ * Implements hook_install().
+ *
+ * Installs the default domain field on nodes. We don't do this via schema.yml
+ * files because we have an unknown number of node types.
+ */
+function domain_access_install() {
+  if (\Drupal::isConfigSyncing()) {
+    // Configuration is assumed to already be checked by the config importer
+    // validation events.
+    return;
+  }
+  $list = [];
+
+  // Assign domain access to bundles.
+  $list['user'] = 'user';
+  $node_types = \Drupal::entityTypeManager()->getStorage('node_type')->loadMultiple();
+  foreach ($node_types as $type => $info) {
+    $list[$type] = 'node';
+  }
+  // Install our fields.
+  foreach ($list as $bundle => $entity_type) {
+    \Drupal::service('domain_access.helper')->confirmFields($entity_type, $bundle);
+  }
+  // Install our actions.
+  $domains = \Drupal::entityTypeManager()->getStorage('domain')->loadMultiple();
+  foreach ($domains as $domain) {
+    domain_access_domain_insert($domain);
+  }
+
+  // Use a higher weight than content_translation (10).
+  // @see https://www.drupal.org/project/domain/issues/3367186
+  module_set_weight('domain_access', 20);
+}
+
+/**
+ * Add the setting to open the domain access fieldset.
+ */
+function domain_access_update_8001() {
+  $config_factory = \Drupal::configFactory();
+  $config = $config_factory->getEditable('domain_access.settings');
+  $config->set('node_advanced_tab_open', 0);
+  $config->save();
+}
+
+/**
+ * Update actions to use arrays for configuration.
+ */
+function domain_access_update_8002() {
+  $config_factory = \Drupal::configFactory();
+  $rename_list = [
+    'domain_access_add_action',
+    'domain_access_add_editor_action',
+    'domain_access_remove_action',
+    'domain_access_remove_editor_action',
+  ];
+  $update_config_list = [
+    'domain_access_all_action',
+    'domain_access_edit_all_action',
+    'domain_access_edit_none_action',
+    'domain_access_none_action',
+  ];
+
+  foreach ($config_factory->listAll('system.action.') as $name) {
+    $config = $config_factory->getEditable($name);
+    $plugin = $config->get('plugin');
+    // Save our default plugins with arrays for configuration.
+    if (in_array($plugin, $update_config_list, TRUE)) {
+      $config->set('configuration', []);
+      $config->save();
+    }
+    // Convert our complex plugins.
+    if (in_array($plugin, $rename_list, TRUE)) {
+      $configuration = $config->get('configuration');
+      // Set the domain_id to an array.
+      $current = $configuration['domain_id'] ?? [];
+      $new_configuration = $configuration;
+      if (!is_array($current)) {
+        $new_configuration['domain_id'] = [$current];
+      }
+      $config->set('configuration', $new_configuration);
+      $config->save();
+    }
+  }
+}
+
+/**
+ * Update action names.
+ */
+function domain_access_update_8003() {
+  $config_factory = \Drupal::configFactory();
+  $rename_list = [
+    'domain_access_add_action',
+    'domain_access_add_editor_action',
+    'domain_access_remove_action',
+    'domain_access_remove_editor_action',
+  ];
+
+  foreach ($config_factory->listAll('system.action.') as $name) {
+    $config = $config_factory->getEditable($name);
+    $plugin = $config->get('plugin');
+    // Rename the items that need it.
+    if (in_array($plugin, $rename_list, TRUE)) {
+      // If the name has a period, change to underscore.
+      $name = $config->getName();
+      if (substr_count($name, $plugin . '.') > 0) {
+        $id = $config->get('id');
+        $config->set('id', str_replace('.', '_', $id));
+        $config->save();
+        $new_name = str_replace($plugin . '.', $plugin . '_', $name);
+        $config_factory->rename($name, $new_name);
+      }
+    }
+  }
+}
+
+/**
+ * Remove default value callback from domain access fields.
+ */
+function domain_access_update_8004() {
+  $field_config_storage = \Drupal::entityTypeManager()->getStorage('field_config');
+  $field_configs = $field_config_storage->loadByProperties(['field_name' => DomainAccessManagerInterface::DOMAIN_ACCESS_FIELD]);
+
+  $field_ids = [];
+  if ($field_configs) {
+    /** @var \Drupal\Core\Field\FieldConfigInterface $field_config */
+    foreach ($field_configs as $field_config) {
+      $field_config->setDefaultValueCallback(NULL);
+      $field_config->setDefaultValue([]);
+      $field_config->save();
+      $field_ids[] = $field_config->id();
+    }
+  }
+  return t('Removed default value callbacks from all domain_access fields: @fields', ['@fields' => implode(', ', $field_ids)]);
+}
+
+/**
+ * Set "add current domain" for required domain_access fields.
+ */
+function domain_access_update_8005() {
+  $field_config_storage = \Drupal::entityTypeManager()->getStorage('field_config');
+  $field_configs = $field_config_storage->loadByProperties(['field_name' => DomainAccessManagerInterface::DOMAIN_ACCESS_FIELD]);
+
+  $field_ids = [];
+  if ($field_configs) {
+    /** @var \Drupal\Core\Field\FieldConfigInterface $field_config */
+    foreach ($field_configs as $field_config) {
+      if ($field_config->isRequired()) {
+        $field_config->setThirdPartySetting('domain_access', 'add_current_domain', TRUE);
+        $field_config->save();
+        $field_ids[] = $field_config->id();
+      }
+    }
+  }
+  return t('Set "add current domain" for required domain_access fields: @fields', ['@fields' => implode(', ', $field_ids)]);
+}
+
+/**
+ * Convert Domain Access filters from InOperator to ManyToOne.
+ */
+function domain_access_update_10001() {
+  $view_storage = \Drupal::entityTypeManager()->getStorage('view');
+  /** @var \Drupal\views\Entity\View[] $views */
+  $views = $view_storage->loadMultiple();
+
+  foreach ($views as $view) {
+    $changed = FALSE;
+
+    $displays = $view->get('display');
+    foreach ($displays as &$display) {
+      $filter_key = DomainAccessManagerInterface::DOMAIN_ACCESS_FIELD . '_target_id';
+      if (isset($display['display_options']['filters'][$filter_key])) {
+        $filter = &$display['display_options']['filters'][$filter_key];
+
+        if (isset($filter['plugin_id']) && $filter['plugin_id'] === 'domain_access_filter') {
+          // Replace legacy InOperator operation values with ManyToOne
+          // equivalents.
+          if (isset($filter['operator'])) {
+            switch ($filter['operator']) {
+              case 'in':
+                $filter['operator'] = 'or';
+                break;
+
+              case 'not in':
+                $filter['operator'] = 'not';
+                break;
+            }
+          }
+
+          $changed = TRUE;
+        }
+      }
+    }
+
+    if ($changed) {
+      $view->set('display', $displays);
+      $view->save();
+      \Drupal::logger('domain_access')->notice(
+        'Updated view %view: converted domain_access_filter from InOperator to ManyToOne.',
+        ['%view' => $view->id()]
+      );
+    }
+  }
+}
+
+/**
+ * Increase the module weight to run hooks after Content Translation.
+ */
+function domain_access_update_10002() {
+  // Use a higher weight than content_translation (10).
+  // @see https://www.drupal.org/project/domain/issues/3367186
+  module_set_weight('domain_access', 20);
+}
+
+/**
+ * Set the default value for the new "access_fields_removal" setting.
+ */
+function domain_access_update_10003() {
+  $config_factory = \Drupal::configFactory();
+  $config = $config_factory->getEditable('domain_access.settings');
+  if (!is_bool($config->get('access_fields_removal'))) {
+    $config->set('access_fields_removal', FALSE);
+    $config->save();
+  }
+}
+
+/**
+ * Set the default value for the new "per_bundle_grants" setting.
+ */
+function domain_access_update_10004() {
+  $config_factory = \Drupal::configFactory();
+  $config = $config_factory->getEditable('domain_access.settings');
+  if (!is_bool($config->get('per_bundle_grants'))) {
+    $config->set('per_bundle_grants', FALSE);
+    $config->save();
+  }
+}

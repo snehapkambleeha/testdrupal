@@ -1,0 +1,12 @@
+drupal.domain:
+  js:
+    js/domain.js: {}
+  dependencies:
+    - core/jquery
+    - core/drupal
+
+machine-name-source:
+  js:
+    js/machine-name-source.js: {}
+  dependencies:
+    - core/once

@@ -1,0 +1,35 @@
+domain_source.settings:
+  type: config_object
+  label: 'Domain Source settings'
+  mapping:
+    exclude_routes:
+      type: sequence
+      label: 'Disable link rewrites for specific entity routes.'
+      sequence:
+        type: label
+        label: 'Route'
+        translatable: false
+    excluded_paths:
+      type: sequence
+      label: 'Disable link rewrites for specific paths.'
+      sequence:
+        type: label
+        label: 'Path'
+        translatable: false
+    excluded_route_names:
+      type: sequence
+      label: 'Disable link rewrites for specific route names.'
+      sequence:
+        type: label
+        label: 'Route name'
+        translatable: false
+action.configuration.domain_source_set_action:
+  type: mapping
+  label: 'Configuration for the set content domain source value action'
+  mapping:
+    domain_id:
+      type: string
+      label: 'The ID of the domain to set'
+action.configuration.domain_source_unset_action:
+  type: action_configuration_default
+  label: 'Configuration for the unset content domain source value action'

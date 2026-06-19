@@ -1,0 +1,39 @@
+<?php
+
+/**
+ * @file
+ * Install, update and uninstall hooks for this module.
+ */
+
+use Drupal\Core\Hook\Attribute\LegacyRequirementsHook;
+use Drupal\domain_content\Hook\DomainContentHooks;
+use Drupal\views\ViewEntityInterface;
+
+/**
+ * Implements hook_requirements().
+ */
+#[LegacyRequirementsHook]
+function domain_content_requirements($phase) {
+  if ($phase === 'runtime') {
+    return \Drupal::service(DomainContentHooks::class)
+      ->runtimeRequirements();
+  }
+  return [];
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function domain_content_uninstall() {
+  $storage = \Drupal::entityTypeManager()->getStorage('view');
+  $entities = [];
+  foreach (['affiliated_content', 'affiliated_editors'] as $id) {
+    $view = $storage->load($id);
+    if ($view instanceof ViewEntityInterface) {
+      $entities[$id] = $view;
+    }
+  }
+  if ($entities !== []) {
+    $storage->delete($entities);
+  }
+}

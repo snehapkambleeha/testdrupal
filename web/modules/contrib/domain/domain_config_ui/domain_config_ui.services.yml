@@ -1,0 +1,32 @@
+services:
+  _defaults:
+    autoconfigure: true
+    autowire: true
+
+  domain_config_ui.manager:
+    class: Drupal\domain_config_ui\DomainConfigUIManager
+  Drupal\domain_config_ui\DomainConfigUIManagerInterface: '@domain_config_ui.manager'
+
+  Drupal\domain_config_ui\Hook\DomainConfigUiFormHooks: ~
+
+  domain_config_ui.factory:
+    class: Drupal\domain_config_ui\Config\DomainConfigFactory
+    decorates: config.factory
+    decoration_priority: 1
+    tags:
+      - {
+          name: service_collector,
+          tag: 'config.factory.override',
+          call: addOverride,
+        }
+    arguments:
+      $storage: '@config.storage'
+
+  domain.language_manager:
+    decorates: language_manager
+    parent: language_manager
+    class: Drupal\domain_config_ui\DomainConfigUILanguageManager
+    calls:
+      - [setDecoratedLanguageManager, ['@domain.language_manager.inner']]
+      - [setDomainConfigFactoryOverride, ['@domain.language.config_factory_override']]
+      - [setDomainNegotiationContext, ['@domain.negotiation_context']]

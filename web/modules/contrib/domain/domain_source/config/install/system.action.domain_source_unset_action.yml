@@ -1,0 +1,10 @@
+langcode: en
+status: true
+dependencies:
+  module:
+    - node
+id: domain_source_unset_action
+label: 'Unset domain source value'
+type: node
+plugin: domain_source_unset_action
+configuration: {  }

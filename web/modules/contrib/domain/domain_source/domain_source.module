@@ -1,0 +1,177 @@
+<?php
+
+/**
+ * @file
+ * Domain-based path rewrites for content.
+ */
+
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Hook\Attribute\LegacyHook;
+use Drupal\Core\Render\BubbleableMetadata;
+use Drupal\domain_source\Hook\DomainSourceEntityHooks;
+use Drupal\domain_source\Hook\DomainSourceFormHooks;
+use Drupal\domain_source\Hook\DomainSourceTokenHooks;
+use Drupal\domain_source\Hook\DomainSourceViewsHooks;
+
+/**
+ * Creates our fields for an entity bundle.
+ *
+ * @param string $entity_type
+ *   The entity type being created. Node and user are supported.
+ * @param string $bundle
+ *   The bundle being created.
+ *
+ * @deprecated in domain:3.0.0 and is removed from domain:4.0.0.
+ *   Use \Drupal\domain_source\DomainSourceHelperInterface
+ *   ::confirmFields() instead.
+ * @see https://www.drupal.org/project/domain/issues/3573820
+ */
+function domain_source_confirm_fields($entity_type, $bundle) {
+  /** @var \Drupal\domain_source\DomainSourceHelperInterface $helper */
+  $helper = \Drupal::service('domain_source.helper');
+  $helper->confirmFields($entity_type, $bundle);
+}
+
+/**
+ * Returns the source domain entity associated with an entity.
+ *
+ * @param \Drupal\Core\Entity\EntityInterface $entity
+ *   The entity to check.
+ *
+ * @return \Drupal\domain\DomainInterface|null
+ *   The domain assigned as source, or NULL.
+ *
+ * @deprecated in domain:3.0.0 and is removed from domain:4.0.0.
+ *   Use \Drupal\domain_source\DomainSourceHelperInterface
+ *   ::getSourceDomain() instead.
+ * @see https://www.drupal.org/project/domain/issues/3573820
+ */
+function domain_source_get_source_domain(EntityInterface $entity) {
+  /** @var \Drupal\domain_source\DomainSourceHelperInterface $helper */
+  $helper = \Drupal::service('domain_source.helper');
+  return $helper->getSourceDomain($entity);
+}
+
+/**
+ * Returns the source domain id associated with an entity.
+ *
+ * @param \Drupal\Core\Entity\EntityInterface $entity
+ *   The entity to check.
+ *
+ * @return string|null
+ *   The domain id, or NULL.
+ *
+ * @deprecated in domain:3.0.0 and is removed from domain:4.0.0.
+ *   Use \Drupal\domain_source\DomainSourceHelperInterface
+ *   ::getSourceDomainId() instead.
+ * @see https://www.drupal.org/project/domain/issues/3573820
+ */
+function domain_source_get(EntityInterface $entity) {
+  /** @var \Drupal\domain_source\DomainSourceHelperInterface $helper */
+  $helper = \Drupal::service('domain_source.helper');
+  return $helper->getSourceDomainId($entity);
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_insert() for node_type.
+ */
+#[LegacyHook]
+function domain_source_node_type_insert(EntityInterface $entity) {
+  \Drupal::service(DomainSourceEntityHooks::class)->nodeTypeInsert($entity);
+}
+
+/**
+ * Implements hook_form_alter().
+ */
+#[LegacyHook]
+function domain_source_form_alter(&$form, &$form_state, $form_id) {
+  \Drupal::service(DomainSourceFormHooks::class)->formAlter($form, $form_state, $form_id);
+}
+
+/**
+ * Implements hook_form_BASE_FORM_ID_alter() for \Drupal\node\NodeForm.
+ */
+#[LegacyHook]
+function domain_source_form_node_form_alter(&$form, FormStateInterface $form_state, $form_id) {
+  \Drupal::service(DomainSourceFormHooks::class)->formNodeFormAlter($form, $form_state, $form_id);
+}
+
+/**
+ * Implements hook_views_data_alter().
+ */
+#[LegacyHook]
+function domain_source_views_data_alter(array &$data) {
+  \Drupal::service(DomainSourceViewsHooks::class)->viewsDataAlter($data);
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter() for devel_generate.
+ */
+#[LegacyHook]
+function domain_source_form_devel_generate_form_content_alter(&$form, &$form_state, $form_id) {
+  \Drupal::service(DomainSourceFormHooks::class)->formDevelGenerateFormContentAlter($form, $form_state, $form_id);
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_presave() for nodes.
+ */
+#[LegacyHook]
+function domain_source_node_presave(EntityInterface $node) {
+  \Drupal::service(DomainSourceEntityHooks::class)->nodePresave($node);
+}
+
+/**
+ * Implements hook_token_info().
+ */
+#[LegacyHook]
+function domain_source_token_info() {
+  return \Drupal::service(DomainSourceTokenHooks::class)->tokenInfo();
+}
+
+/**
+ * Implements hook_tokens().
+ */
+#[LegacyHook]
+function domain_source_tokens($type, $tokens, array $data, array $options, BubbleableMetadata $bubbleable_metadata) {
+  return \Drupal::service(DomainSourceTokenHooks::class)->tokens($type, $tokens, $data, $options, $bubbleable_metadata);
+}
+
+/**
+ * Implements hook_hook_info().
+ */
+function domain_source_hook_info() {
+  // @todo Remove once we depend on Drupal 12.0+.
+  return [
+    'domain_source_alter' => [
+      'group' => 'domain_source',
+    ],
+    'domain_source_path_alter' => [
+      'group' => 'domain_source',
+    ],
+  ];
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_insert() for domain.
+ */
+#[LegacyHook]
+function domain_source_domain_insert(EntityInterface $entity) {
+  \Drupal::service(DomainSourceEntityHooks::class)->domainInsert($entity);
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_delete() for domain.
+ */
+#[LegacyHook]
+function domain_source_domain_delete(EntityInterface $entity) {
+  \Drupal::service(DomainSourceEntityHooks::class)->domainDelete($entity);
+}
+
+/**
+ * Implements hook_entity_update().
+ */
+#[LegacyHook]
+function domain_source_entity_update(EntityInterface $entity): void {
+  \Drupal::service(DomainSourceEntityHooks::class)->entityUpdate($entity);
+}

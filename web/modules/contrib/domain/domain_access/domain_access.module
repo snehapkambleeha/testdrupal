@@ -1,0 +1,215 @@
+<?php
+
+/**
+ * @file
+ * Domain-based access control for content.
+ */
+
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\Entity\EntityTypeInterface;
+use Drupal\Core\Field\FieldDefinitionInterface;
+use Drupal\Core\Field\FieldItemListInterface;
+use Drupal\Core\Form\FormState;
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Hook\Attribute\LegacyHook;
+use Drupal\Core\Session\AccountInterface;
+use Drupal\domain_access\Hook\DomainAccessDomainHooks;
+use Drupal\domain_access\Hook\DomainAccessEntityHooks;
+use Drupal\domain_access\Hook\DomainAccessFormHooks;
+use Drupal\domain_access\Hook\DomainAccessNodeHooks;
+use Drupal\domain_access\Hook\DomainAccessViewsHooks;
+use Drupal\node\NodeInterface;
+
+/**
+ * Implements hook_node_grants().
+ */
+#[LegacyHook]
+function domain_access_node_grants(AccountInterface $account, $op) {
+  return \Drupal::service(DomainAccessNodeHooks::class)->nodeGrants($account, $op);
+}
+
+/**
+ * Implements hook_node_access_records().
+ */
+#[LegacyHook]
+function domain_access_node_access_records(NodeInterface $node) {
+  return \Drupal::service(DomainAccessNodeHooks::class)->nodeAccessRecords($node);
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_presave() for nodes.
+ */
+#[LegacyHook]
+function domain_access_node_presave(EntityInterface $node) {
+  \Drupal::service(DomainAccessEntityHooks::class)->nodePresave($node);
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_presave() for users.
+ */
+#[LegacyHook]
+function domain_access_user_presave(EntityInterface $account) {
+  \Drupal::service(DomainAccessEntityHooks::class)->userPresave($account);
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter() for devel_generate content.
+ */
+#[LegacyHook]
+function domain_access_form_devel_generate_form_content_alter(&$form, &$form_state, $form_id) {
+  \Drupal::service(DomainAccessFormHooks::class)->formDevelGenerateFormContentAlter($form, $form_state, $form_id);
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter() for devel_generate user.
+ */
+#[LegacyHook]
+function domain_access_form_devel_generate_form_user_alter(&$form, &$form_state, $form_id) {
+  \Drupal::service(DomainAccessFormHooks::class)->formDevelGenerateFormUserAlter($form, $form_state, $form_id);
+}
+
+/**
+ * Implements hook_form_BASE_FORM_ID_alter() for \Drupal\node\NodeForm.
+ */
+#[LegacyHook]
+function domain_access_form_node_form_alter(&$form, FormState $form_state, $form_id) {
+  \Drupal::service(DomainAccessFormHooks::class)->formNodeFormAlter($form, $form_state, $form_id);
+}
+
+/**
+ * Implements hook_form_BASE_FORM_ID_alter() for \Drupal\user\UserForm.
+ */
+#[LegacyHook]
+function domain_access_form_user_form_alter(&$form, &$form_state, $form_id) {
+  \Drupal::service(DomainAccessFormHooks::class)->formUserFormAlter($form, $form_state, $form_id);
+}
+
+/**
+ * Implements hook_domain_references_alter().
+ */
+#[LegacyHook]
+function domain_access_domain_references_alter($query, $account, $context) {
+  \Drupal::service(DomainAccessDomainHooks::class)->domainReferencesAlter($query, $account, $context);
+}
+
+/**
+ * Implements hook_node_access().
+ */
+#[LegacyHook]
+function domain_access_node_access(NodeInterface $node, $op, AccountInterface $account) {
+  return \Drupal::service(DomainAccessNodeHooks::class)->nodeAccess($node, $op, $account);
+}
+
+/**
+ * Implements hook_node_create_access().
+ */
+#[LegacyHook]
+function domain_access_node_create_access(AccountInterface $account, $context, $entity_bundle) {
+  return \Drupal::service(DomainAccessNodeHooks::class)->nodeCreateAccess($account, $context, $entity_bundle);
+}
+
+/**
+ * Implements hook_entity_field_access().
+ */
+#[LegacyHook]
+function domain_access_entity_field_access($operation, FieldDefinitionInterface $field_definition, AccountInterface $account, ?FieldItemListInterface $items = NULL) {
+  return \Drupal::service(DomainAccessEntityHooks::class)->entityFieldAccess($operation, $field_definition, $account, $items);
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_insert() for node_type.
+ */
+#[LegacyHook]
+function domain_access_node_type_insert(EntityInterface $entity) {
+  \Drupal::service(DomainAccessEntityHooks::class)->nodeTypeInsert($entity);
+}
+
+/**
+ * Creates our fields for an entity bundle.
+ *
+ * @param string $entity_type
+ *   The entity type being created.
+ * @param string $bundle
+ *   The bundle being created.
+ * @param array $text
+ *   Optional text overrides keyed by entity type.
+ *
+ * @deprecated in domain:3.0.0 and is removed from domain:4.0.0.
+ *   Use \Drupal\domain_access\DomainAccessHelperInterface::confirmFields().
+ * @see https://www.drupal.org/project/domain/issues/3573820
+ */
+function domain_access_confirm_fields($entity_type, $bundle, array $text = []) {
+  \Drupal::service('domain_access.helper')->confirmFields($entity_type, $bundle, $text);
+}
+
+/**
+ * Implements hook_views_data_alter().
+ */
+#[LegacyHook]
+function domain_access_views_data_alter(array &$data) {
+  \Drupal::service(DomainAccessViewsHooks::class)->viewsDataAlter($data);
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_insert() for domain.
+ */
+#[LegacyHook]
+function domain_access_domain_insert($entity) {
+  \Drupal::service(DomainAccessDomainHooks::class)->domainInsert($entity);
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_delete() for domain.
+ */
+#[LegacyHook]
+function domain_access_domain_delete(EntityInterface $entity) {
+  \Drupal::service(DomainAccessDomainHooks::class)->domainDelete($entity);
+}
+
+/**
+ * Implements hook_form_alter().
+ */
+#[LegacyHook]
+function domain_access_form_alter(&$form, &$form_state, $form_id) {
+  \Drupal::service(DomainAccessFormHooks::class)->formAlter($form, $form_state, $form_id);
+}
+
+/**
+ * Implements hook_entity_presave().
+ */
+#[LegacyHook]
+function domain_access_entity_presave(EntityInterface $entity) {
+  \Drupal::service(DomainAccessEntityHooks::class)->entityPresave($entity);
+}
+
+/**
+ * Implements hook_entity_predelete().
+ */
+#[LegacyHook]
+function domain_access_entity_predelete(EntityInterface $entity) {
+  \Drupal::service(DomainAccessEntityHooks::class)->entityPredelete($entity);
+}
+
+/**
+ * Implements hook_entity_prepare_form().
+ */
+#[LegacyHook]
+function domain_access_entity_prepare_form(EntityInterface $entity, $operation, FormStateInterface $form_state) {
+  \Drupal::service(DomainAccessEntityHooks::class)->entityPrepareForm($entity, $operation, $form_state);
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter() for field_config_edit_form.
+ */
+#[LegacyHook]
+function domain_access_form_field_config_edit_form_alter(&$form, FormStateInterface $form_state, $form_id) {
+  \Drupal::service(DomainAccessFormHooks::class)->formFieldConfigEditFormAlter($form, $form_state, $form_id);
+}
+
+/**
+ * Implements hook_entity_bundle_field_info_alter().
+ */
+#[LegacyHook]
+function domain_access_entity_bundle_field_info_alter(&$fields, EntityTypeInterface $entity_type, $bundle) {
+  \Drupal::service(DomainAccessEntityHooks::class)->entityBundleFieldInfoAlter($fields, $entity_type, $bundle);
+}

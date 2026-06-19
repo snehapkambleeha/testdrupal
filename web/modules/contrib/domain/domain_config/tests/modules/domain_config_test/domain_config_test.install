@@ -1,0 +1,94 @@
+<?php
+
+/**
+ * @file
+ * Hook implementations for this module.
+ */
+
+use Drupal\Core\Config\FileStorage;
+
+/**
+ * Implements hook_install().
+ */
+function domain_config_test_install() {
+  $config_factory = \Drupal::configFactory();
+  $module_handler = \Drupal::service('extension.list.module');
+  $domain_config_factory_override =
+    \Drupal::service('domain.config_factory_override');
+  $domain_language_config_factory_override =
+    \Drupal::service('domain.language.config_factory_override');
+
+  // Base path to this module’s config/install directory.
+  // @phpstan-ignore-next-line
+  $install_path = $module_handler->getPath('domain_config_test') . '/config/install';
+
+  // 1. Import normal config from config/install (default collection).
+  $default_storage = new FileStorage($install_path);
+  foreach ($default_storage->listAll() as $config_name) {
+    $data = $default_storage->read($config_name);
+    if ($data !== FALSE) {
+      $config_factory->getEditable($config_name)
+        ->setData($data)
+        ->save();
+    }
+  }
+
+  // 2. Import per-domain configs from config/install/domain/{domain}/.
+  $domain_dir = $install_path . '/domain';
+  if (is_dir($domain_dir)) {
+    foreach (scandir($domain_dir) as $domain) {
+      if ($domain[0] === '.') {
+        // Skip "." and "..".
+        continue;
+      }
+      $domain_path = $domain_dir . '/' . $domain;
+      if (!is_dir($domain_path)) {
+        continue;
+      }
+
+      // Create a FileStorage for this domain.
+      $domain_storage = new FileStorage($domain_path);
+
+      // Write configs into the matching config collection.
+      $collection_storage = $domain_config_factory_override->getStorage($domain);
+
+      foreach ($domain_storage->listAll() as $config_name) {
+        $data = $domain_storage->read($config_name);
+        if ($data !== FALSE) {
+          $collection_storage->write($config_name, $data);
+        }
+      }
+
+      if (!is_dir($languages_path = $domain_path . '/language')) {
+        continue;
+      }
+
+      // 2. Import per-domain and per-language configs from
+      // config/install/domain/{domain}/language/{language}/.
+      foreach (scandir($languages_path) as $language) {
+        if ($language[0] === '.') {
+          // Skip "." and "..".
+          continue;
+        }
+        $language_path = $languages_path . '/' . $language;
+        if (!is_dir($language_path)) {
+          continue;
+        }
+
+        // Create a FileStorage for this domain language.
+        $language_storage = new FileStorage($language_path);
+
+        // Write configs into the matching config collection.
+        $language_collection_storage =
+          $domain_language_config_factory_override->getDomainStorage($domain, $language);
+
+        foreach ($language_storage->listAll() as $config_name) {
+          $data = $language_storage->read($config_name);
+          if ($data !== FALSE) {
+            $language_collection_storage->write($config_name, $data);
+          }
+        }
+      }
+    }
+  }
+}

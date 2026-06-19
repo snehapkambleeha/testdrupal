@@ -1,0 +1,7 @@
+testapi.data_page:
+  path: '/external-data'
+  defaults:
+    _controller: '\Drupal\testapi\Controller\DataDisplayController::viewData'
+    _title: 'External API Dashboard'
+  requirements:
+    _permission: 'access content'

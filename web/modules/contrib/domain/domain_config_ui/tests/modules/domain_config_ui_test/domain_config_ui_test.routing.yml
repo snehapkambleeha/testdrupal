@@ -1,0 +1,31 @@
+domain_config_ui_test.form1:
+  path: '/admin/config/domain_config_ui_test/form1'
+  defaults:
+    _form: '\Drupal\domain_config_ui_test\Form\Form1'
+    _title: 'Domain config ui test form 1'
+  requirements:
+    _permission: 'administer domain config ui'
+
+domain_config_ui_test.form2:
+  path: '/admin/config/domain_config_ui_test/form2'
+  defaults:
+    _form: '\Drupal\domain_config_ui_test\Form\Form2'
+    _title: 'Domain config ui test form 2'
+  requirements:
+    _permission: 'administer domain config ui'
+
+domain_config_ui_test.form3:
+  path: '/admin/config/domain_config_ui_test/form3'
+  defaults:
+    _form: '\Drupal\domain_config_ui_test\Form\Form3'
+    _title: 'Domain config ui test form 3'
+  requirements:
+    _permission: 'administer domain config ui'
+
+domain_config_ui_test.form_unregistered:
+  path: '/admin/config/domain_config_ui_test/form_unregistered'
+  defaults:
+    _form: '\Drupal\domain_config_ui_test\Form\FormUnregistered'
+    _title: 'Domain config ui test form unregistered'
+  requirements:
+    _permission: 'administer domain config ui'

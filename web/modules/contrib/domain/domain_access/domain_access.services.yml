@@ -1,0 +1,21 @@
+services:
+  _defaults:
+    autowire: true
+
+  domain_access.manager:
+    class: Drupal\domain_access\DomainAccessManager
+  Drupal\domain_access\DomainAccessManagerInterface: '@domain_access.manager'
+  access_check.domain_access_views:
+    class: Drupal\domain_access\Access\DomainAccessViewsAccess
+    tags:
+      - { name: access_check, applies_to: _domain_access_views }
+
+  domain_access.helper:
+    class: Drupal\domain_access\DomainAccessHelper
+  Drupal\domain_access\DomainAccessHelperInterface: '@domain_access.helper'
+
+  Drupal\domain_access\Hook\DomainAccessNodeHooks: ~
+  Drupal\domain_access\Hook\DomainAccessEntityHooks: ~
+  Drupal\domain_access\Hook\DomainAccessFormHooks: ~
+  Drupal\domain_access\Hook\DomainAccessViewsHooks: ~
+  Drupal\domain_access\Hook\DomainAccessDomainHooks: ~

@@ -1,0 +1,44 @@
+<?php
+
+/**
+ * @file
+ * Maps multiple host requests to a single domain record.
+ */
+
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\Core\Hook\Attribute\LegacyHook;
+use Drupal\Core\Session\AccountInterface;
+use Drupal\domain\DomainInterface;
+use Drupal\domain_alias\Hook\DomainAliasHooks;
+
+/**
+ * Implements hook_domain_request_alter().
+ */
+#[LegacyHook]
+function domain_alias_domain_request_alter(DomainInterface &$domain) {
+  \Drupal::service(DomainAliasHooks::class)->domainRequestAlter($domain);
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_load() for domain entities.
+ */
+#[LegacyHook]
+function domain_alias_domain_load($entities) {
+  \Drupal::service(DomainAliasHooks::class)->domainLoad($entities);
+}
+
+/**
+ * Implements hook_domain_operations().
+ */
+#[LegacyHook]
+function domain_alias_domain_operations(DomainInterface $domain, AccountInterface $account) {
+  return \Drupal::service(DomainAliasHooks::class)->domainOperations($domain, $account);
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_delete().
+ */
+#[LegacyHook]
+function domain_alias_domain_delete(EntityInterface $entity) {
+  \Drupal::service(DomainAliasHooks::class)->domainDelete($entity);
+}

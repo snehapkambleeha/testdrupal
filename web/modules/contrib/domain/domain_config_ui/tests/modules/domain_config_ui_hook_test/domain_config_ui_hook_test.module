@@ -1,0 +1,17 @@
+<?php
+
+/**
+ * @file
+ * Hook implementations for this module.
+ */
+
+use Drupal\Core\Hook\Attribute\LegacyHook;
+use Drupal\domain_config_ui_hook_test\Hook\DomainConfigUiHookTestHooks;
+
+/**
+ * Implements hook_domain_config_ui_disallowed_routes_alter().
+ */
+#[LegacyHook]
+function domain_config_ui_hook_test_domain_config_ui_disallowed_routes_alter(&$disallowed) {
+  \Drupal::service(DomainConfigUiHookTestHooks::class)->domainConfigUiDisallowedRoutesAlter($disallowed);
+}

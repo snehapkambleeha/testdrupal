@@ -1,0 +1,74 @@
+################
+# Includes
+#
+# Additional configuration can be provided through includes.
+# One advantage of include files is that if they are updated upstream, the changes affect all pipelines using that include.
+#
+# Includes can be overridden by re-declaring anything provided in an include, here in gitlab-ci.yml
+# https://docs.gitlab.com/ee/ci/yaml/includes.html#override-included-configuration-values
+################
+
+include:
+  ################
+  # DrupalCI includes:
+  # As long as you include this, any future includes added by the Drupal Association will be accessible to your pipelines automatically.
+  # View these include files at https://git.drupalcode.org/project/gitlab_templates/
+  ################
+  - project: $_GITLAB_TEMPLATES_REPO
+    ref: $_GITLAB_TEMPLATES_REF
+    file:
+      - '/includes/include.drupalci.main.yml'
+      - '/includes/include.drupalci.variables.yml'
+      - '/includes/include.drupalci.workflows.yml'
+
+################
+# Pipeline configuration variables
+#
+# These are the variables provided to the Run Pipeline form that a user may want to override.
+#
+# Docs at https://git.drupalcode.org/project/gitlab_templates/-/blob/1.0.x/includes/include.drupalci.variables.yml
+################
+
+################
+# Variable overrides for domain testing.
+################
+.test-variables:
+  variables:
+    SIMPLETEST_BASE_URL: "http://example.local/$_WEB_ROOT"
+.phpunit-base:
+  before_script:
+    - echo "127.0.0.1 example.local" >> /etc/hosts
+    - echo "127.0.0.1 one.example.local" >> /etc/hosts
+    - echo "127.0.0.1 two.example.local" >> /etc/hosts
+    - echo "127.0.0.1 three.example.local" >> /etc/hosts
+    - echo "127.0.0.1 four.example.local" >> /etc/hosts
+    - echo "127.0.0.1 five.example.local" >> /etc/hosts
+    - echo "127.0.0.1 six.example.local" >> /etc/hosts
+    - echo "127.0.0.1 seven.example.local" >> /etc/hosts
+    - echo "127.0.0.1 eight.example.local" >> /etc/hosts
+    - echo "127.0.0.1 nine.example.local" >> /etc/hosts
+    - echo "127.0.0.1 ten.example.local" >> /etc/hosts
+
+variables:
+  _PHPUNIT_CONCURRENT: 1
+  #_PHPUNIT_TESTGROUPS: gitlab_ci_fail
+  #SKIP_CSPELL: 1
+  #SKIP_ESLINT: 1
+  #SKIP_STYLELINT: 1
+  #SKIP_COMPOSER_LINT: 1
+  #SKIP_PHPCS: 1
+  #SKIP_PHPSTAN: 1
+  OPT_IN_TEST_CURRENT: 1
+  OPT_IN_TEST_PREVIOUS_MAJOR: 1
+  OPT_IN_TEST_NEXT_MAJOR: 0
+  _CSPELL_IGNORE_PATHS: '"mkdocs.yml", "docs/css/pygments.css", "docs/**/*.??.md"'
+
+pages:
+  script:
+    - pip install mkdocs-material mkdocs-static-i18n
+    - mkdocs build --site-dir public
+
+phpstan (previous major):
+  rules:
+    # We are only interested in PHPStan on the current version.
+    - when: never

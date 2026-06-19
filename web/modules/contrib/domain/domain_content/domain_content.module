@@ -1,0 +1,19 @@
+<?php
+
+/**
+ * @file
+ * Hook implementations for this module.
+ */
+
+use Drupal\Core\Hook\Attribute\LegacyHook;
+use Drupal\Core\Session\AccountInterface;
+use Drupal\domain\DomainInterface;
+use Drupal\domain_content\Hook\DomainContentHooks;
+
+/**
+ * Implements hook_domain_operations().
+ */
+#[LegacyHook]
+function domain_content_domain_operations(DomainInterface $domain, AccountInterface $account) {
+  return \Drupal::service(DomainContentHooks::class)->domainOperations($domain, $account);
+}

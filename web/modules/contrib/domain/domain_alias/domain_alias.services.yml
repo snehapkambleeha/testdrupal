@@ -1,0 +1,9 @@
+services:
+  _defaults:
+    autowire: true
+
+  domain_alias.validator:
+    class: Drupal\domain_alias\DomainAliasValidator
+  Drupal\domain_alias\DomainAliasValidatorInterface: '@domain_alias.validator'
+
+  Drupal\domain_alias\Hook\DomainAliasHooks: ~

@@ -1,0 +1,50 @@
+<?php
+
+/**
+ * @file
+ * Domain hook test module.
+ */
+
+use Drupal\Core\Hook\Attribute\LegacyHook;
+use Drupal\domain\DomainInterface;
+use Drupal\domain_test\Hook\DomainTestHooks;
+
+/**
+ * Implements hook_domain_load().
+ */
+#[LegacyHook]
+function domain_test_domain_load(array $domains) {
+  \Drupal::service(DomainTestHooks::class)->domainLoad($domains);
+}
+
+/**
+ * Implements hook_domain_validate_alter().
+ */
+#[LegacyHook]
+function domain_test_domain_validate_alter(&$error_list, $hostname) {
+  \Drupal::service(DomainTestHooks::class)->domainValidateAlter($error_list, $hostname);
+}
+
+/**
+ * Implements hook_domain_request_alter().
+ */
+#[LegacyHook]
+function domain_test_domain_request_alter(DomainInterface &$domain) {
+  \Drupal::service(DomainTestHooks::class)->domainRequestAlter($domain);
+}
+
+/**
+ * Implements hook_domain_operations().
+ */
+#[LegacyHook]
+function domain_test_domain_operations(DomainInterface $domain) {
+  return \Drupal::service(DomainTestHooks::class)->domainOperations($domain);
+}
+
+/**
+ * Implements hook_domain_references_alter().
+ */
+#[LegacyHook]
+function domain_test_domain_references_alter($query, $account, $context) {
+  \Drupal::service(DomainTestHooks::class)->domainReferencesAlter($query, $account, $context);
+}

@@ -1,0 +1,4 @@
+node_advanced_tab: true
+node_advanced_tab_open: false
+access_fields_removal: false
+per_bundle_grants: false

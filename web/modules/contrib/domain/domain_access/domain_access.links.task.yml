@@ -1,0 +1,4 @@
+domain_access.settings:
+  title: Access settings
+  route_name: domain_access.settings
+  base_route: domain.admin

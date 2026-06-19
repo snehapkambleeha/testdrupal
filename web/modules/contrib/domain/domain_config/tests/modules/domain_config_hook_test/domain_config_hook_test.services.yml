@@ -1,0 +1,10 @@
+services:
+  _defaults:
+    autowire: true
+
+  Drupal\domain_config_hook_test\Hook\DomainConfigHookTestHooks: ~
+
+  domain_config_service.page_cache_request_policy:
+    class: Drupal\domain_config_hook_test\PageCache\RequestPolicy\PageCacheRequestPolicy
+    tags:
+      - { name: page_cache_request_policy }

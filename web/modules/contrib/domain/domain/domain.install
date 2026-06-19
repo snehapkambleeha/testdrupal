@@ -1,0 +1,155 @@
+<?php
+
+/**
+ * @file
+ * Install, update and uninstall functions for the Domain Access module.
+ */
+
+use Drupal\Core\Hook\Attribute\LegacyRequirementsHook;
+use Drupal\domain\DomainInterface;
+use Drupal\domain\Hook\DomainHooks;
+
+/**
+ * Implements hook_requirements().
+ */
+#[LegacyRequirementsHook]
+function domain_requirements($phase) {
+  if ($phase === 'runtime') {
+    return \Drupal::service(DomainHooks::class)
+      ->runtimeRequirements();
+  }
+  return [];
+}
+
+/**
+ * Implements hook_install().
+ *
+ * Installs the domain admin field on users.
+ */
+function domain_install() {
+  _domain_configure_field();
+}
+
+/**
+ * Implements hook_uninstall().
+ *
+ * Core does not properly purge field provided by configuration entities.
+ * There are a few related issues and @todo notices in core to this effect.
+ * Instead, we handle field purges ourselves.
+ */
+function domain_uninstall() {
+  // Do a pass of purging on deleted Field API data, if any exists.
+  $limit = \Drupal::config('field.settings')->get('purge_batch_size');
+  field_purge_batch($limit);
+  \Drupal::entityTypeManager()->clearCachedDefinitions();
+}
+
+/**
+ * Implements hook_update_N().
+ *
+ * Installs the domain admin field on users.
+ */
+function domain_update_8001() {
+  _domain_configure_field();
+}
+
+/**
+ * Configures user form display to checkboxes widget for domain admin field.
+ */
+function _domain_configure_field() {
+  $display = \Drupal::entityTypeManager()->getStorage('entity_form_display')->load('user.user.default');
+  if (!is_null($display)) {
+    $display->setComponent(DomainInterface::DOMAIN_ADMIN_FIELD, [
+      'type' => 'options_buttons',
+      'weight' => 50,
+    ])->save();
+  }
+}
+
+/**
+ * Updates block domain context_mapping for Drupal 8.8 and higher.
+ */
+function domain_update_8002() {
+  $new_context_id = '@domain.current_domain_context:domain';
+  $config_factory = \Drupal::configFactory();
+  $update_list = [];
+  foreach ($config_factory->listAll('block.block.') as $block_config_name) {
+    $update_block = FALSE;
+    $block = $config_factory->getEditable($block_config_name);
+    $visibility = $block->get('visibility');
+    if (!is_null($visibility)) {
+      foreach ($visibility as $condition_plugin_id => &$condition) {
+        if ($condition_plugin_id === 'domain' && (!isset($condition['context_mapping']['domain']) || $condition['context_mapping']['domain'] !== $new_context_id)) {
+          $condition['context_mapping']['domain'] = $new_context_id;
+          $update_block = TRUE;
+          $update_list[] = $block_config_name;
+        }
+      }
+    }
+    if ($update_block) {
+      $block->set('visibility', $visibility);
+      $block->save();
+    }
+  }
+  if ($update_list === []) {
+    return t('No blocks updated.');
+  }
+  else {
+    return t('Updated @count blocks: @blocks',
+      [
+        '@count' => count($update_list),
+        '@blocks' => implode(', ', $update_list),
+      ]
+    );
+  }
+}
+
+/**
+ * Ensure that the update to block visibility was applied properly.
+ */
+function domain_update_8003() {
+  domain_update_8002();
+}
+
+/**
+ * Update entity reference field handler from 'domain:domain' to 'domain_admin'.
+ */
+function domain_update_10001() {
+  $config_factory = \Drupal::configFactory();
+  $updated_fields = [];
+
+  // Update field configurations that use the old 'domain:domain' handler.
+  foreach ($config_factory->listAll('field.field.') as $field_config_name) {
+    $field_config = $config_factory->getEditable($field_config_name);
+    $handler = $field_config->get('settings.handler');
+
+    if ($handler === 'domain:domain') {
+      $field_config->set('settings.handler', 'domain_admin');
+      $field_config->save();
+      $updated_fields[] = $field_config_name;
+    }
+  }
+
+  if (empty($updated_fields)) {
+    return t('No field configurations needed updating.');
+  }
+
+  return t('Updated @count field configuration(s): @fields', [
+    '@count' => count($updated_fields),
+    '@fields' => implode(', ', $updated_fields),
+  ]);
+}
+
+/**
+ * Add language_negotiation and allow_destination_domain to domain.settings.
+ */
+function domain_update_10002() {
+  $config = \Drupal::configFactory()->getEditable('domain.settings');
+  if ($config->get('language_negotiation') === NULL) {
+    $config->set('language_negotiation', FALSE);
+  }
+  if ($config->get('allow_destination_domain') === NULL) {
+    $config->set('allow_destination_domain', FALSE);
+  }
+  $config->save();
+}

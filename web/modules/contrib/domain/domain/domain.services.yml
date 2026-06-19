@@ -1,0 +1,64 @@
+services:
+  _defaults:
+    autoconfigure: true
+    autowire: true
+
+  access_check.domain:
+    class: Drupal\domain\Access\DomainAccessCheck
+    tags:
+      - { name: access_check }
+  Drupal\domain\Access\DomainAccessCheckInterface: '@access_check.domain'
+  access_check.domain_route:
+    class: Drupal\domain\Access\DomainRouteCheck
+    tags:
+      - { name: access_check, applies_to: _domain }
+  domain.current_domain_context:
+    class: Drupal\domain\ContextProvider\CurrentDomainContext
+    tags:
+      - { name: 'context_provider' }
+  domain.element_manager:
+    class: Drupal\domain\DomainElementManager
+  Drupal\domain\DomainElementManagerInterface: '@domain.element_manager'
+  domain.negotiation_context:
+    class: Drupal\domain\DomainNegotiationContext
+    tags:
+      # Persist across mid-request container rebuilds (e.g.
+      # ModuleInstaller::install() / ::uninstall()) so the active
+      # domain established at kernel.request time remains available
+      # to post-install URL generation and config overrides.
+      - { name: persist }
+  Drupal\domain\DomainNegotiationContext: '@domain.negotiation_context'
+  domain.negotiator:
+    class: Drupal\domain\DomainNegotiator
+  Drupal\domain\DomainNegotiatorInterface: '@domain.negotiator'
+  domain.subscriber:
+    class: Drupal\domain\EventSubscriber\DomainSubscriber
+  domain.token:
+    class: Drupal\domain\DomainToken
+  Drupal\domain\DomainToken: '@domain.token'
+  domain.validator:
+    class: Drupal\domain\DomainValidator
+  Drupal\domain\DomainValidatorInterface: '@domain.validator'
+  cache_context.domain:
+    class: Drupal\domain\Cache\DomainCacheContext
+    tags:
+      - { name: cache.context}
+  Drupal\domain\EventSubscriber\ConfigSubscriber: ~
+
+  domain.path_processor:
+    class: Drupal\domain\HttpKernel\DomainPathProcessor
+    tags:
+      - { name: path_processor_outbound, priority: 80 }
+  Drupal\domain\HttpKernel\DomainPathProcessor: '@domain.path_processor'
+
+  domain.prefix_path_processor:
+    class: Drupal\domain\HttpKernel\DomainPrefixPathProcessor
+    tags:
+      - { name: path_processor_inbound, priority: 350 }
+      - { name: path_processor_outbound, priority: 50 }
+  Drupal\domain\HttpKernel\DomainPrefixPathProcessor: '@domain.prefix_path_processor'
+
+  Drupal\domain\Hook\DomainHooks: ~
+  Drupal\domain\Hook\DomainEntityHooks: ~
+  Drupal\domain\Hook\DomainTokenHooks: ~
+  Drupal\domain\Hook\DomainThemeHooks: ~

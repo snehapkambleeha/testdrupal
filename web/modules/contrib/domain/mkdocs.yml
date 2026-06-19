@@ -1,0 +1,88 @@
+site_name: Domain 3.x
+site_url: !ENV [CI_PAGES_URL, 'http://127.0.0.1:8888/']
+repo_url: https://git.drupalcode.org/project/domain
+repo_name: drupal/domain
+theme:
+  name: material
+  logo: logo.png
+  favicon: favicon.png
+  icon:
+    repo: fontawesome/brands/gitlab
+  palette:
+    primary: blue
+  features:
+    - content.code.copy
+    - navigation.footer
+    - navigation.indexes
+    - navigation.path
+    - navigation.top
+    - toc.follow
+extra:
+  generator: false
+extra_css:
+  - css/pygments.css
+plugins:
+  - privacy:
+      enabled: !ENV [CI, false]
+  - search
+  - i18n:
+      languages:
+        - locale: en
+          name: English
+          default: true
+          build: true
+        - locale: fr
+          name: Français
+          build: true
+          nav:
+            - Présentation: index.md
+            - Domain:
+                - domain/index.md
+                - Préfixe de chemin: domain/path_prefix.md
+            - Domain Access: domain_access/index.md
+            - Domain Alias: domain_alias/index.md
+            - Domain Config: domain_config/index.md
+            - Domain Config UI: domain_config_ui/index.md
+            - Domain Content: domain_content/index.md
+            - Domain Source: domain_source/index.md
+            - Modules contrib associés: contrib.md
+        - locale: es
+          name: Español
+          build: true
+          nav:
+            - Presentación: index.md
+            - Domain:
+                - domain/index.md
+                - Prefijo de ruta: domain/path_prefix.md
+            - Domain Access: domain_access/index.md
+            - Domain Alias: domain_alias/index.md
+            - Domain Config: domain_config/index.md
+            - Domain Config UI: domain_config_ui/index.md
+            - Domain Content: domain_content/index.md
+            - Domain Source: domain_source/index.md
+            - Módulos contrib relacionados: contrib.md
+nav:
+  - Presentation: index.md
+  - Domain:
+      - domain/index.md
+      - Path prefix: domain/path_prefix.md
+  - Domain Access: domain_access/index.md
+  - Domain Alias: domain_alias/index.md
+  - Domain Config: domain_config/index.md
+  - Domain Config UI: domain_config_ui/index.md
+  - Domain Content: domain_content/index.md
+  - Domain Source: domain_source/index.md
+  - Related contrib modules: contrib.md
+markdown_extensions:
+  - admonition
+  - pymdownx.highlight:
+      use_pygments: true
+      pygments_lang_class: true
+      extend_pygments_lang:
+        - name: php
+          lang: php
+          options:
+            startinline: true
+  - pymdownx.superfences
+  - toc:
+      permalink: true

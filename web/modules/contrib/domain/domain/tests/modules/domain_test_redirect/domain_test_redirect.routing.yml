@@ -1,0 +1,13 @@
+domain_test_redirect.non_trusted_redirect:
+  path: '/non-trusted-redirect'
+  defaults:
+    _controller: 'Drupal\domain_test_redirect\Controller\TestRedirectController::nonTrustedRedirect'
+  requirements:
+    _access: 'TRUE'
+
+domain_test_redirect.trusted_redirect:
+  path: '/trusted-redirect'
+  defaults:
+    _controller: 'Drupal\domain_test_redirect\Controller\TestRedirectController::trustedRedirect'
+  requirements:
+    _access: 'TRUE'

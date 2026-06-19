@@ -1,0 +1,31 @@
+<?php
+
+/**
+ * @file
+ * Hook implementations for this module.
+ */
+
+/**
+ * Implements hook_user_login().
+ *
+ * This hook must stay procedural (no #[Hook] attribute) because
+ * hook_module_implements_alter() is used to disable it, and
+ * attribute-based hooks cannot be disabled that way.
+ */
+function domain_config_hook_test_user_login($account) {
+  \Drupal::state()->set('domain_config_test__user_login', TRUE);
+}
+
+/**
+ * Implements hook_module_implements_alter().
+ *
+ * Note: intentionally not using #[LegacyModuleImplementsAlter]
+ * because this function must actually run to disable the
+ * user_login hook above. The deprecation is accepted.
+ */
+function domain_config_hook_test_module_implements_alter(&$implementations, $hook) {
+  if ($hook === 'user_login') {
+    // Turn off domain_config_hook_test's hook_user_login.
+    unset($implementations['domain_config_hook_test']);
+  }
+}

@@ -1,0 +1,26 @@
+services:
+  _defaults:
+    autowire: true
+
+  domain_source.element_manager:
+    class: Drupal\domain_source\DomainSourceElementManager
+  Drupal\domain_source\DomainSourceElementManagerInterface: '@domain_source.element_manager'
+  domain_source.helper:
+    class: Drupal\domain_source\DomainSourceHelper
+  Drupal\domain_source\DomainSourceHelperInterface: '@domain_source.helper'
+  domain_source.path_processor:
+    class: Drupal\domain_source\HttpKernel\DomainSourcePathProcessor
+    tags:
+      - { name: path_processor_outbound, priority: 310 }
+  Drupal\domain_source\HttpKernel\DomainSourcePathProcessor: '@domain_source.path_processor'
+  domain_source.token:
+    class: Drupal\domain_source\DomainSourceToken
+  Drupal\domain_source\DomainSourceToken: '@domain_source.token'
+  domain_source.route_provider:
+    class: Drupal\domain_source\HttpKernel\DomainSourceRouteProvider
+    parent: router.route_provider
+
+  Drupal\domain_source\Hook\DomainSourceEntityHooks: ~
+  Drupal\domain_source\Hook\DomainSourceFormHooks: ~
+  Drupal\domain_source\Hook\DomainSourceTokenHooks: ~
+  Drupal\domain_source\Hook\DomainSourceViewsHooks: ~

@@ -1,0 +1,20 @@
+# Schema for the domain access plugins.
+
+views.access.domain_access_admin:
+  type: mapping
+  label: 'Domain Access: Administer domain editors'
+views.access.domain_access_editor:
+  type: mapping
+  label: 'Domain Access: Edit domain content'
+views.argument.domain_access_argument:
+  type: views_argument
+  label: 'Domain Access'
+views.field.domain_access_field:
+  type: views.field.field
+  label: 'Domain Access'
+views.filter.domain_access_current_all_filter:
+  type: views_filter
+  label: 'Current Domain or All Domains'
+views.filter.domain_access_filter:
+  type: views.filter.many_to_one
+  label: 'Domain Access'

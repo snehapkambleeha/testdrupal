@@ -1,0 +1,16 @@
+<?php
+
+/**
+ * @file
+ * Install, update and uninstall functions for the Domain Config UI module.
+ */
+
+/**
+ * Remove the deprecated path_pages setting.
+ */
+function domain_config_ui_update_10001() {
+  $config = \Drupal::configFactory()->getEditable('domain_config_ui.settings');
+  $config->clear('path_pages');
+  $config->clear('remember_domain');
+  $config->save();
+}

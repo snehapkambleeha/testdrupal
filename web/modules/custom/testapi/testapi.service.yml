@@ -1,0 +1,4 @@
+services:
+  testapi.client:
+    class: Drupal\testapi\Service\ApiClient
+    arguments: ['@http_client']

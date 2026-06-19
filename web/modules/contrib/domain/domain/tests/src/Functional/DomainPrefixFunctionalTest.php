@@ -1,0 +1,258 @@
+<?php
+
+namespace Drupal\Tests\domain\Functional;
+
+use Drupal\Core\Session\AccountInterface;
+use Drupal\Core\Url;
+use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+
+/**
+ * Tests the full request cycle with path-prefixed domains.
+ *
+ * Exercises domain negotiation, inbound/outbound path processing,
+ * block rendering, and form submission through real HTTP requests
+ * — the scenarios that kernel tests cannot cover.
+ *
+ * @group domain
+ */
+#[Group('domain')]
+#[RunTestsInSeparateProcesses]
+class DomainPrefixFunctionalTest extends DomainTestBase {
+
+  /**
+   * {@inheritdoc}
+   */
+  protected static $modules = ['domain', 'domain_test', 'node', 'block'];
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function setUp(): void {
+    parent::setUp();
+
+    // Enable path prefix support and rebuild the container.
+    $this->config('domain.settings')
+      ->set('path_prefix', TRUE)
+      ->save();
+    $this->rebuildContainer();
+  }
+
+  /**
+   * Tests that the correct domain is negotiated for prefixed paths.
+   *
+   * Places the domain server block (which displays the active domain
+   * label) and visits each domain's home page. The unprefixed domain
+   * should be negotiated at the root, and the prefixed domain should
+   * be negotiated when the prefix is in the path.
+   */
+  public function testPrefixNegotiation(): void {
+    $this->domainCreateTestDomains(3, prefixes: TRUE);
+    $domains = $this->getDomains();
+
+    // Place a block that shows the active domain.
+    $this->drupalPlaceBlock('domain_server_block');
+    user_role_grant_permissions(
+      AccountInterface::ANONYMOUS_ROLE,
+      ['view domain information']
+    );
+
+    // Visit each domain's home page and verify negotiation.
+    foreach ($domains as $domain) {
+      $this->drupalGet($domain->getPath());
+      $this->assertSession()->statusCodeEquals(200);
+      $this->assertSession()->responseContains($domain->label());
+    }
+  }
+
+  /**
+   * Tests the domain switcher block with prefixed domains.
+   *
+   * The switcher block renders links to all domains using
+   * getLink(). Verifies that each link label includes the path
+   * prefix (e.g. "example.com/fr") and that URLs contain the
+   * correct prefix without doubling.
+   */
+  public function testSwitcherBlockLinks(): void {
+    $this->domainCreateTestDomains(3, prefixes: TRUE);
+    $domains = $this->getDomains();
+
+    $this->drupalPlaceBlock('domain_switcher_block');
+    user_role_grant_permissions(
+      AccountInterface::ANONYMOUS_ROLE,
+      ['use domain switcher block']
+    );
+
+    // Visit the unprefixed domain's home page.
+    $default = $domains['example_com'];
+    $this->drupalGet($default->getPath());
+    $this->assertSession()->statusCodeEquals(200);
+
+    // Verify each domain appears as a link. The link text includes
+    // the path prefix when set (e.g. "example.com/fr").
+    foreach ($domains as $domain) {
+      $label = $domain->getCanonical();
+      if ($domain->getPathPrefix() !== '') {
+        $label .= '/' . $domain->getPathPrefix();
+      }
+      $this->findLink($label);
+    }
+  }
+
+  /**
+   * Tests the domain nav block with prefixed domains.
+   *
+   * Verifies that the nav block renders links to all prefixed
+   * domain home pages and that the link URLs contain the correct
+   * prefix. Also tests the hostname label mode to ensure the
+   * prefix is appended to the hostname.
+   */
+  public function testNavBlockLinks(): void {
+    $this->domainCreateTestDomains(3, prefixes: TRUE);
+    $domains = $this->getDomains();
+
+    $block = $this->drupalPlaceBlock('domain_nav_block');
+    user_role_grant_permissions(
+      AccountInterface::ANONYMOUS_ROLE,
+      ['use domain nav block']
+    );
+
+    // Test with default settings (link_label = name, link = home).
+    $this->drupalGet('<front>');
+    $this->assertSession()->statusCodeEquals(200);
+    foreach ($domains as $domain) {
+      $this->findLink($domain->label());
+    }
+
+    // Switch to hostname label — prefixed domains should show
+    // hostname/prefix.
+    $this->config('block.block.' . $block->id())
+      ->set('settings.link_label', 'hostname')
+      ->save();
+
+    $this->drupalGet('<front>');
+    foreach ($domains as $domain) {
+      $prefix = $domain->getPathPrefix();
+      if ($prefix !== '') {
+        $expected_label = $domain->getHostname() . '/' . $prefix;
+      }
+      else {
+        $expected_label = $domain->getHostname();
+      }
+      $this->findLink($expected_label);
+    }
+
+    // Switch to URL label.
+    $this->config('block.block.' . $block->id())
+      ->set('settings.link_label', 'url')
+      ->save();
+
+    $this->drupalGet('<front>');
+    foreach ($domains as $domain) {
+      $this->findLink($domain->getPath());
+    }
+  }
+
+  /**
+   * Tests that links on prefixed pages have correct outbound URLs.
+   *
+   * Visits a page on a prefixed domain and verifies that links
+   * generated by Drupal's URL system include the prefix. Uses the
+   * login page which contains a predictable form action URL.
+   */
+  public function testOutboundUrlsOnPrefixedDomain(): void {
+    $this->domainCreateTestDomains(2, prefixes: TRUE);
+    $domains = $this->getDomains();
+
+    $prefixed = $domains['one_example_com'];
+    $prefix = $prefixed->getPathPrefix();
+
+    // Visit the login page on the prefixed domain.
+    $login_url = rtrim($prefixed->getPath(), '/') . '/user/login';
+    $this->drupalGet($login_url);
+    $this->assertSession()->statusCodeEquals(200);
+
+    // The form action should include the prefix.
+    $this->assertSession()->responseContains('/' . $prefix . '/user/login');
+  }
+
+  /**
+   * Tests form submission on a prefixed domain.
+   *
+   * Logs in as admin on a prefixed domain and submits the site
+   * information form. Verifies that the form submission works
+   * and the success message is displayed.
+   */
+  public function testFormSubmissionOnPrefixedDomain(): void {
+    $this->domainCreateTestDomains(2, prefixes: TRUE);
+    $domains = $this->getDomains();
+
+    $admin = $this->drupalCreateUser([
+      'administer site configuration',
+    ]);
+    $this->drupalLogin($admin);
+
+    $prefixed = $domains['one_example_com'];
+    $settings_url = rtrim($prefixed->getPath(), '/') . '/admin/config/system/site-information';
+    $this->drupalGet($settings_url);
+    $this->assertSession()->statusCodeEquals(200);
+
+    // Submit the form without changes.
+    $this->submitForm([], 'Save configuration');
+    $this->assertSession()->pageTextContains(
+      'The configuration options have been saved.'
+    );
+  }
+
+  /**
+   * Tests that the nav block active class is set correctly.
+   *
+   * When visiting a prefixed domain, only that domain's link
+   * in the nav block should have the active class.
+   */
+  public function testNavBlockActiveClass(): void {
+    $this->domainCreateTestDomains(3, prefixes: TRUE);
+    $domains = $this->getDomains();
+
+    $block = $this->drupalPlaceBlock('domain_nav_block');
+    user_role_grant_permissions(
+      AccountInterface::ANONYMOUS_ROLE,
+      ['use domain nav block']
+    );
+
+    foreach ($domains as $current_domain) {
+      $this->drupalGet(
+        Url::fromRoute('<front>'),
+        ['base_url' => rtrim($current_domain->getPath(), '/')]
+      );
+      $page = $this->getSession()->getPage();
+      $block_element = $page->findById(
+        'block-' . $block->id()
+      );
+
+      foreach ($domains as $id => $domain) {
+        $link = $block_element->findLink($domain->label());
+        $this->assertNotNull(
+          $link,
+          "Link for {$domain->label()} should exist."
+        );
+        $class = $link->getAttribute('class') ?? '';
+        if ($id === $current_domain->id()) {
+          $this->assertStringContainsString(
+            'active',
+            $class,
+            "Active domain link should have 'active' class."
+          );
+        }
+        else {
+          $this->assertStringNotContainsString(
+            'active',
+            $class,
+            "Inactive domain link should not have 'active' class."
+          );
+        }
+      }
+    }
+  }
+
+}

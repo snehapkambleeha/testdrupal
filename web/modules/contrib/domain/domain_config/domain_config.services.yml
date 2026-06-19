@@ -1,0 +1,50 @@
+services:
+  _defaults:
+    autoconfigure: true
+    autowire: true
+
+  domain.config_factory_override:
+    class: Drupal\domain_config\Config\DomainConfigFactoryOverride
+    arguments:
+      $baseStorage: '@config.storage'
+    tags:
+      - { name: config.factory.override, priority: -253 }
+  Drupal\domain_config\Config\DomainConfigFactoryOverrideInterface: '@domain.config_factory_override'
+
+  domain.language.config_factory_override:
+    class: Drupal\domain_config\Config\DomainLanguageConfigFactoryOverride
+    arguments:
+      $baseStorage: '@config.storage'
+    tags:
+      - { name: config.factory.override, priority: -252 }
+    calls:
+      - [setDomainNegotiationContext, ['@domain.negotiation_context']]
+  Drupal\domain_config\Config\DomainLanguageConfigFactoryOverrideInterface: '@domain.language.config_factory_override'
+
+  domain_config.library.discovery.collector:
+    decorates: library.discovery.collector
+    class: Drupal\domain_config\DomainConfigLibraryDiscoveryCollector
+    arguments:
+      $cache: '@cache.discovery'
+      $lock: '@lock'
+    tags:
+      - { name: needs_destruction }
+    calls:
+      - [setDomainNegotiationContext, ['@domain.negotiation_context']]
+
+  domain.language_manager:
+    decorates: language_manager
+    parent: language_manager
+    class: Drupal\domain_config\DomainConfigLanguageManager
+    calls:
+      - [setDecoratedLanguageManager, ['@domain.language_manager.inner']]
+      - [setDomainConfigFactoryOverride, ['@domain.language.config_factory_override']]
+
+  Drupal\domain_config\EventSubscriber\DomainConfigCacheTag:
+    arguments:
+      $configCacheTag: '@system.config_cache_tag'
+
+  domain_config.config_migration:
+    class: Drupal\domain_config\Service\DomainConfigMigration
+    arguments:
+      $configStorage: '@config.storage'

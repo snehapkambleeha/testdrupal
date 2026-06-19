@@ -1,0 +1,17 @@
+<?php
+
+/**
+ * @file
+ * Adds test module hook.
+ */
+
+use Drupal\Core\Hook\Attribute\LegacyHook;
+use Drupal\domain_source_test\Hook\DomainSourceTestHooks;
+
+/**
+ * Implements hook_domain_source_alter().
+ */
+#[LegacyHook]
+function domain_source_test_domain_source_alter(&$source, $path, $options) {
+  \Drupal::service(DomainSourceTestHooks::class)->domainSourceAlter($source, $path, $options);
+}

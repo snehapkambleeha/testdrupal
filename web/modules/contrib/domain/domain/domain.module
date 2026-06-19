@@ -1,0 +1,143 @@
+<?php
+
+/**
+ * @file
+ * Defines a Domain concept for use with Drupal.
+ */
+
+use Drupal\Core\Hook\Attribute\LegacyHook;
+use Drupal\Core\Render\BubbleableMetadata;
+use Drupal\Core\Routing\RouteMatchInterface;
+use Drupal\domain\DomainInterface;
+use Drupal\domain\Entity\Domain;
+use Drupal\domain\Hook\DomainEntityHooks;
+use Drupal\domain\Hook\DomainHooks;
+use Drupal\domain\Hook\DomainThemeHooks;
+use Drupal\domain\Hook\DomainTokenHooks;
+
+/**
+ * Entity URI callback.
+ *
+ * @param \Drupal\domain\DomainInterface $domain
+ *   The Domain object.
+ *
+ * @return \Drupal\Core\Url
+ *   The Domain URL.
+ *
+ * @deprecated in domain:3.0.0 and is removed from domain:4.0.0.
+ *   Use \Drupal\domain\Entity\Domain::uri().
+ * @see https://www.drupal.org/project/domain/issues/3573820
+ */
+function domain_uri(DomainInterface $domain) {
+  return Domain::uri($domain);
+}
+
+/**
+ * Implements hook_help().
+ */
+#[LegacyHook]
+function domain_help($route_name, RouteMatchInterface $route_match) {
+  return \Drupal::service(DomainHooks::class)->help($route_name, $route_match);
+}
+
+/**
+ * Implements hook_token_info().
+ */
+#[LegacyHook]
+function domain_token_info() {
+  return \Drupal::service(DomainTokenHooks::class)->tokenInfo();
+}
+
+/**
+ * Implements hook_tokens().
+ */
+#[LegacyHook]
+function domain_tokens($type, $tokens, array $data, array $options, BubbleableMetadata $bubbleable_metadata) {
+  return \Drupal::service(DomainTokenHooks::class)->tokens($type, $tokens, $data, $options, $bubbleable_metadata);
+}
+
+/**
+ * Implements hook_preprocess_HOOK() for html.html.twig.
+ */
+#[LegacyHook]
+function domain_preprocess_html(array &$variables) {
+  \Drupal::service(DomainThemeHooks::class)->preprocessHtml($variables);
+}
+
+/**
+ * Implements hook_form_BASE_FORM_ID_alter() for \Drupal\user\UserForm.
+ */
+#[LegacyHook]
+function domain_form_user_form_alter(&$form, &$form_state, $form_id) {
+  \Drupal::service(DomainEntityHooks::class)->formUserFormAlter($form, $form_state, $form_id);
+}
+
+/**
+ * Implements hook_language_negotiation_info_alter().
+ */
+#[LegacyHook]
+function domain_language_negotiation_info_alter(array &$negotiation_info) {
+  \Drupal::service(DomainHooks::class)->languageNegotiationInfoAlter($negotiation_info);
+}
+
+/**
+ * Implements hook_domain_references_alter().
+ */
+#[LegacyHook]
+function domain_domain_references_alter($query, $account, $context) {
+  \Drupal::service(DomainHooks::class)->domainReferencesAlter($query, $account, $context);
+}
+
+/**
+ * Implements hook_views_data_alter().
+ */
+#[LegacyHook]
+function domain_views_data_alter(array &$data) {
+  \Drupal::service(DomainEntityHooks::class)->viewsDataAlter($data);
+}
+
+/**
+ * Implements hook_theme().
+ */
+#[LegacyHook]
+function domain_theme() {
+  return \Drupal::service(DomainThemeHooks::class)->theme();
+}
+
+/**
+ * Prepares variables for block templates.
+ *
+ * Default template: domain-nav-block.html.twig.
+ *
+ * @param array $variables
+ *   An associative array containing:
+ *   - items: An array of labels and urls for use in the list.
+ *     Properties used: 'label', 'url', 'active'.
+ *
+ * @deprecated in domain:3.0.0 and is removed from domain:4.0.0.
+ *   Use \Drupal\domain\Hook\DomainThemeHooks
+ *   ::preprocessDomainNavBlock() via hook_theme().
+ * @see https://www.drupal.org/project/domain/issues/3573820
+ */
+function template_preprocess_domain_nav_block(array &$variables) {
+  \Drupal::service(DomainThemeHooks::class)->preprocessDomainNavBlock($variables);
+}
+
+/**
+ * Implements hook_hook_info().
+ */
+function domain_hook_info() {
+  // @todo Remove once we depend on Drupal 12.0+.
+  $hooks = [];
+  $hooks['domain_request_alter'] = [
+    'group' => 'domain',
+  ];
+  $hooks['domain_validate_alter'] = [
+    'group' => 'domain',
+  ];
+  $hooks['domain_references_alter'] = [
+    'group' => 'domain',
+  ];
+
+  return $hooks;
+}

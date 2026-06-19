@@ -1,0 +1,92 @@
+<?php
+
+namespace Drupal\Tests\domain\Functional;
+
+use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+
+/**
+ * Tests the domain record form interface.
+ *
+ * @group domain
+ */
+#[Group('domain')]
+#[RunTestsInSeparateProcesses]
+class DomainFormsTest extends DomainTestBase {
+
+  /**
+   * Create, edit and delete a domain via the user interface.
+   */
+  public function testDomainInterface() {
+    $perms = ['administer domains', 'create domains'];
+    $admin_user = $this->drupalCreateUser($perms);
+    $this->drupalLogin($admin_user);
+
+    /** @var \Drupal\domain\DomainStorageInterface $storage */
+    $storage = \Drupal::entityTypeManager()->getStorage('domain');
+
+    // No domains should exist.
+    $this->domainTableIsEmpty();
+
+    // Visit the main domain administration page.
+    $this->drupalGet('admin/config/domain');
+
+    // Check for the add message.
+    $this->assertSession()->pageTextContains('There are no domain record entities yet.');
+
+    // Visit the add domain administration page.
+    $this->drupalGet('admin/config/domain/add');
+
+    // Make a POST request on admin/config/domain/add.
+    $edit = $this->domainPostValues();
+    // Use hostname with dot (.) to avoid validation error.
+    $edit['hostname'] = 'example.com';
+    $this->drupalGet('admin/config/domain/add');
+    $this->submitForm($edit, 'Save');
+
+    // Did it save correctly?
+    $default_id = $storage->loadDefaultId();
+    $this->assertNotEmpty($default_id, 'Domain record saved via form.');
+
+    // Does it load correctly?
+    $storage->resetCache([$default_id]);
+    $new_domain = $storage->load($default_id);
+    $this->assertEquals($default_id, $new_domain->id(), 'Domain loaded properly.');
+
+    // Has a UUID been set?
+    $this->assertNotEmpty($new_domain->uuid(), 'Entity UUID set properly.');
+
+    // Visit the edit domain administration page.
+    $editUrl = 'admin/config/domain/edit/' . $new_domain->id();
+    $this->drupalGet($editUrl);
+
+    // Update the record.
+    $edit = [];
+    $edit['name'] = 'Foo';
+    $edit['validate_url'] = 0;
+    $this->drupalGet($editUrl);
+    $this->submitForm($edit, 'Save');
+
+    // Check that the update succeeded.
+    $storage->resetCache([$default_id]);
+    $domain = $storage->load($default_id);
+    $this->assertEquals('Foo', $domain->label(), 'Domain record updated via form.');
+
+    // Visit the delete domain administration page.
+    $deleteUrl = 'admin/config/domain/delete/' . $new_domain->id();
+    $this->drupalGet($deleteUrl);
+
+    // Delete the record.
+    $this->drupalGet($deleteUrl);
+    $this->submitForm([], 'Delete');
+    $this->assertSession()->pageTextContains('The domain record Foo has been deleted.');
+    $this->assertSession()->statusCodeEquals(200);
+    $storage->resetCache([$default_id]);
+    $domain = $storage->load($default_id);
+    $this->assertEmpty($domain, 'Domain record deleted.');
+
+    // No domains should exist.
+    $this->domainTableIsEmpty();
+  }
+
+}

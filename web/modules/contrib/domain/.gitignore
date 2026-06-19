@@ -1,0 +1,4 @@
+# Ignore system files
+.idea
+.DS_Store
+site/

@@ -1,0 +1,126 @@
+<?php
+
+/**
+ * @file
+ * Install, update and uninstall functions for the Domain Access module.
+ */
+
+use Drupal\Core\Config\FileStorage;
+use Drupal\Core\Config\InstallStorage;
+use Drupal\domain_source\Hook\DomainSourceEntityHooks;
+use Drupal\system\Entity\Action;
+
+/**
+ * Implements hook_install().
+ *
+ * Installs the domain source field on nodes. We don't do this via schema.yml
+ * files because we have an unknown number of node types.
+ */
+function domain_source_install() {
+  if (\Drupal::isConfigSyncing()) {
+    // Configuration is assumed to already be checked by the config importer
+    // validation events.
+    return;
+  }
+  // Assign domain source to bundles.
+  $list = [];
+  $node_types = \Drupal::entityTypeManager()->getStorage('node_type')->loadMultiple();
+  foreach ($node_types as $type => $info) {
+    $list[$type] = 'node';
+  }
+  // Install our fields.
+  foreach ($list as $bundle => $entity_type) {
+    \Drupal::service('domain_source.helper')->confirmFields($entity_type, $bundle);
+  }
+
+  // Install our actions.
+  $domains = \Drupal::entityTypeManager()->getStorage('domain')->loadMultiple();
+  foreach ($domains as $domain) {
+    \Drupal::service(DomainSourceEntityHooks::class)->createDomainSourceSetAction($domain);
+  }
+
+  // Use a higher weight than domain_access (20).
+  // @see https://www.drupal.org/project/domain/issues/3550142
+  module_set_weight('domain_source', 30);
+}
+
+/**
+ * Install domain source actions.
+ */
+function domain_source_update_8001() {
+  if (!Action::load('domain_source_unset_action')) {
+    $entity_type_manager = \Drupal::entityTypeManager();
+    $module_handler = \Drupal::moduleHandler();
+
+    // Save the unset domain source action to config.
+    $config_install_path = $module_handler->getModule('domain_source')->getPath() . '/' . InstallStorage::CONFIG_INSTALL_DIRECTORY;
+    $storage = new FileStorage($config_install_path);
+    $entity_type_manager
+      ->getStorage('action')
+      ->create($storage->read('system.action.domain_source_unset_action'))
+      ->save();
+  }
+
+  // Install our actions.
+  $domains = \Drupal::entityTypeManager()->getStorage('domain')->loadMultiple();
+  foreach ($domains as $domain) {
+    \Drupal::service(DomainSourceEntityHooks::class)->createDomainSourceSetAction($domain);
+  }
+}
+
+/**
+ * Increase the module weight to run hooks after Domain Access.
+ */
+function domain_source_update_10001() {
+  // Use a higher weight than domain_access (20).
+  // @see https://www.drupal.org/project/domain/issues/3550142
+  module_set_weight('domain_source', 30);
+}
+
+/**
+ * Initialize the source_language_negotiation setting.
+ */
+function domain_source_update_10002() {
+  $config = \Drupal::configFactory()->getEditable('domain_source.settings');
+  if ($config->get('source_language_negotiation') === NULL) {
+    $config->set('source_language_negotiation', FALSE);
+    $config->save();
+  }
+}
+
+/**
+ * Add the allow_destination_domain setting to domain_source.settings.
+ */
+function domain_source_update_10003() {
+  $config = \Drupal::configFactory()->getEditable('domain_source.settings');
+  if ($config->get('allow_destination_domain') === NULL) {
+    $config->set('allow_destination_domain', FALSE)->save();
+  }
+}
+
+/**
+ * Migrate experimental settings from domain_source to domain.
+ */
+function domain_source_update_10004() {
+  $source = \Drupal::configFactory()
+    ->getEditable('domain_source.settings');
+  $target = \Drupal::configFactory()
+    ->getEditable('domain.settings');
+
+  // Migrate source_language_negotiation -> language_negotiation.
+  $lang = $source->get('source_language_negotiation');
+  if ($lang !== NULL) {
+    $target->set('language_negotiation', (bool) $lang);
+    $source->clear('source_language_negotiation');
+  }
+
+  // Migrate allow_destination_domain.
+  $dest = $source->get('allow_destination_domain');
+  if ($dest !== NULL) {
+    $target->set('allow_destination_domain', (bool) $dest);
+    $source->clear('allow_destination_domain');
+  }
+
+  $target->save();
+  $source->save();
+}
