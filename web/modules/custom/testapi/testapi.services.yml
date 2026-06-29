@@ -1,0 +1,8 @@
+services:
+  testapi.city:
+    class: Drupal\testapi\Services\CityService
+    arguments: ['@http_client']
+
+  testapi.city_details:
+    class: Drupal\testapi\Services\CityDetailsService
+    arguments: ['@http_client']

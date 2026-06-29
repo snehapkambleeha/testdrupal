@@ -4,33 +4,33 @@ namespace Drupal\testapi\Controller;
 
 use Drupal\Core\Controller\ControllerBase;
 use GuzzleHttp\Exception\GuzzleException;
-use Drupal\Core\Render\Markup;
 
-class DataDisplayController extends ControllerBase {
+class CityDetailsController extends ControllerBase {
+  public function viewCity($city): array {
 
-
-  public function viewData(): array {
-   
-    $cityService = \Drupal::service('testapi.city');
-    $cities = $cityService->getListofCity();
+    $cityService = \Drupal::service('testapi.city_details');
+    $city_details = $cityService->getCityDetails($city);
 
     // 1. Define table headers
     $header = [
       'id' => $this->t('ID'),
       'name' => $this->t('Item Name'),
+      'capital' => $this->t('Capital'),
+      'region' => $this->t('Region'),
+      'subregion' => $this->t('Subregion'),
     ];
-    $city_url = '/city-details'; // Assuming this is the correct URL for city details
     $id = 0;
     $rows = [];
 
 
-    foreach ($cities['data']['objects'] as $key => $city) {
+    foreach ($city_details['data']['objects'] as $key => $city) {
       // Debugging line to check the output of each city name
-      $raw_anchor = Markup::create('<a href="/city-details/'.$city['names']['common'].'" target="_blank">'.$city['names']['common'].'</a>');
-
       $rows[$key] = [
-        'id' => $key,
-        'name' => $raw_anchor,
+        'id' => $id++,
+        'name' => $city['names']['common'],
+        'capital' => $city['capitals'][0]['name'],  
+        'region' => $city['region'],
+        'subregion' => $city['subregion'],
       ];
     }
 
@@ -43,5 +43,6 @@ class DataDisplayController extends ControllerBase {
         'max-age' => 0, // Set to 0 for real-time testing, or apply custom cache contexts
       ],
     ];
+   
   }
 }

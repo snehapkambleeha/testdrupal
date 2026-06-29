@@ -5,3 +5,11 @@ testapi.data_page:
     _title: 'External API Dashboard'
   requirements:
     _permission: 'access content'
+
+testapi.city_details:
+  path: '/city-details/{city}'
+  defaults:
+    _controller: '\Drupal\testapi\Controller\CityDetailsController::viewCity'
+    _title: 'City Details'
+  requirements:
+    _permission: 'access content'
